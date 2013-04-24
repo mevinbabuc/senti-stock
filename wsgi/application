@@ -1,0 +1,241 @@
+#!/usr/bin/python
+import os
+
+virtenv = os.environ['APPDIR'] + '/virtenv/'
+os.environ['PYTHON_EGG_CACHE'] = os.path.join(virtenv, 'lib/python2.6/site-packages')
+virtualenv = os.path.join(virtenv, 'bin/activate_this.py')
+try:
+    execfile(virtualenv, dict(__file__=virtualenv))
+except IOError:
+    pass
+#
+# IMPORTANT: Put any additional includes below this line.  If placed above this
+# line, it's possible required libraries won't be in your searchable path
+# 
+import os,datetime
+from pytz import timezone
+from re import sub
+import json,web,urllib2
+from numpy import loadtxt
+from jinja2 import Environment,FileSystemLoader
+import PyRegression,PyClassi
+
+import subprocess
+
+
+urls = ('/', 'TheProject',
+    '/news','news',
+    '/qoutes','qoutes',
+    '/sentiment','sentiment',
+    '/changeSentiment','changeSentiment',
+    '/classify','classify',
+    '/classify_data','classify_data',
+    '/report','report',
+    '/newDataRejuest','newDataRejuest',
+    '/settings','settings',
+    '/admin.html','admin',
+    '/user.html','user',
+    '/log','logs',
+    )
+web.config.debug = True
+app = web.application(urls, globals())
+render = web.template.render('templates/')
+
+#Path config
+direct="/var/lib/openshift/512e12ac4382ec1abb000384/app-root/runtime/repo/data/"
+
+
+
+#DATABASE
+db = web.database(dbn='mysql', host="127.7.115.1", db='sentistock', port=3306, user='adminzQa3Yqe', pw='RDKC1VlNyLSg')
+
+def render_template(template_name,values, **context):
+    extensions = context.pop('extensions', [])
+    globals = context.pop('globals', {})
+
+    jinja_env = Environment(
+            loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')),
+            extensions=extensions,
+            )
+    jinja_env.globals.update(globals)
+
+    #jinja_env.update_template_context(context)
+    return jinja_env.get_template(template_name).render(context,values=values)
+
+
+#CLASS
+class TheProject:
+    def GET(self):
+        web.header('Content-Type', 'text/html')
+        values = {}
+
+        tables = ['aapl','goog','bac']
+        for table in tables:
+            b = values[table+'_stock'] = float(db.query("SELECT quote FROM quotes_"+table+" order by time DESC LIMIT 0,1" )[0].quote)
+            a = values[table+'_our']   = float("{0:.2f}".format(PyRegression.getCompany(table,1)))
+            diff = a - b
+            avg  = (a + b)/2
+            values[table+'_per'] = float("{0:.2f}".format((diff/avg)*100))
+        return render_template("user.html",values);
+
+class logs:
+    def GET(self):
+        
+        #time
+        d = datetime.datetime.today()
+        america=timezone('America/New_York')
+        india=timezone('Asia/Kolkata')
+        dd=america.localize(d)
+        dd=dd.astimezone(india)
+        cur_date=dd.strftime('%Y%m%d')
+        
+        web.header('Content-Type', 'text/html')
+        p = subprocess.Popen("cd "+os.getenv("OPENSHIFT_PYTHON_LOG_DIR")+"&& date && tail access_log-"+cur_date+"-000000-EST error_log-"+cur_date+"-000000-EST error_insider.log error_Quotes.log error_news.log error_searchTwit.log error_StreamTwit.log ~/cron-1.4/log/cron.* error_classifier.log", stdout=subprocess.PIPE, shell=True)
+        (output, err) = p.communicate()
+        return "Indian Time : "+dd.strftime('%d/%m/%y %H:%M:%S')+"<br><pre>"+output+"</pre>"
+
+class news:
+    def GET(self):
+        data = ""
+        datainput = web.input()
+        table = "news_" + datainput.table
+        loadmoreButton = '<tr><td colspan="3"><a onclick="get(\'news\',\'' + datainput.table + '\',1)" id="loadmoreButton" data-loading-text="Loading..."><i class=" icon-refresh"></i>Load More</a></td></tr>'
+        query = "SELECT * FROM " + table + " order by time DESC LIMIT " + str(datainput.lower) +",10" 
+        results = db.query(query)
+        for i in results:
+            href =  urllib2.unquote(i.href)
+            data = data + "<tr><td>"+ i.content + "</td><td><a href='" + href + "'>" + sub(r'(?:https?://)([^/]+)(?:\S+)', r"\1", href) +"</a></td><td>" +str(i.time) + "</td></tr>"
+        if not results:
+            data = '<div class="alert"><strong>No more data</strong></tr>'
+        return data + loadmoreButton 
+
+
+class qoutes:
+    def GET(self):
+        data = ""
+        datainput = web.input()
+        table = "quotes_" + datainput.table
+        loadmoreButton = '<tr><td colspan="3"><a onclick="get(\'qoutes\',\'' + datainput.table + '\',1)" id="loadmoreButton" data-loading-text="Loading..."><i class=" icon-refresh"></i>Load More</a></td></tr>'
+        query = "SELECT * FROM " + table + " order by time DESC LIMIT " + str(datainput.lower) +",10" 
+        results = db.query(query)
+        for i in results:
+            data = data + "<tr><td>"+ i.quote + "</td><td>" +str(i.time) + "</td></tr>"
+        if not results:
+            data = '<div class="alert"><strong>No more data</strong></tr>'
+        return data + loadmoreButton 
+
+
+class sentiment:
+    def GET(self):
+        data = ""
+        datainput = web.input()
+        table = "tweets_" + datainput.table
+        loadmoreButton = '<tr><td colspan="3"><a onclick="get(\'sentiment\',\'' + datainput.table + '\',1)" id="loadmoreButton"  data-loading-text="Loading..."><i class=" icon-refresh"></i>Load More</a></td></tr>'
+        if datainput.table.encode("utf-8") == "bac".encode("utf-8"):
+            bacsearch=str("tweet like concat('%$','bac%')".encode("utf-8"))
+            query = "SELECT * FROM " + table + " where sentiment = 9 and "+bacsearch+" order by time DESC LIMIT " + str(datainput.lower) +",10"
+            print query
+        else :
+        # print datainput.table
+            query = "SELECT * FROM " + table + " where sentiment = 9 order by time DESC LIMIT " + str(datainput.lower) +",10" 
+        results = db.query(query)
+        for i in results:
+            tweet = i.tweet.encode('utf-8')
+            data = data + "<tr><td>"+ tweet + "</td><td>" + str(i.time) + "</td><td class='btn-group' data-id='" + str(i.id) + "' data-toggle='buttons-radio'><button id='0' type='button' class='btn btn-danger' >  <i class='icon-thumbs-down'> </i></button><button id='1' type='button' class='btn btn-warning'> <i class='icon-magnet'> </i></button><button id='2' type='button' class='btn btn-success'> <i class='icon-thumbs-up'> </i></button></td></tr>"  
+        if not results:
+            data = '<div class="alert"><strong>No more data</strong></tr>'
+        return data + loadmoreButton.encode('utf-8')
+
+class changeSentiment:
+    def GET(self):
+        data = web.input(value = 4)
+        table = "tweets_" + data.table #table name from the js
+        if db.update(table, where= "id='" + data.id + "'", sentiment = data.value) > 0 :
+            return "true"
+
+
+class classify:
+    def GET(self):
+        data = ""
+        datainput = web.input()
+        table = "tweets_" + datainput.table
+        loadmoreButton = '<tr><td colspan="3"><a onclick="get(\'classify\',\'' + datainput.table + '\',1)" id="loadmoreButton" data-loading-text="Loading..."><i class=" icon-refresh"></i> Load More</a></td></tr>'
+        query = "SELECT * FROM " + table + " where classified = 9 order by time DESC LIMIT " + str(datainput.lower) +",10" 
+        results = db.query(query)
+        for i in results:
+            tweet = i.tweet.encode('utf-8')
+            data = data + "<tr><td>"+ tweet + "</td><td><span class='label'></span></td><td><button type='button' class='btn btn-primary' >Classify </button></td></tr>"  
+        if not results:
+            data = '<div class="alert"><strong>No more data</strong></tr>'
+        return data + loadmoreButton.encode('utf-8')
+        
+class classify_data:
+    def GET(self):
+        classified_value = 9
+        data = web.input()
+        table = "tweets_" + data.table
+        input_data = "tweet = '" + data.tweet + "'"
+        classified = PyClassi.classify(input_data)
+        if classified < 0.45:
+            classified_value = 0
+        else:
+            classified_value = 2
+        db.update(table, where= sub("\$","$$",input_data), classified = classified_value)
+        
+        if classified < 0.45:
+            return "negative"
+        else :
+            return "positive"
+
+
+class report:
+    def GET(self):
+        data_input = web.input(table = "aapl")
+        table = "quotes_" + data_input.table
+        query = "SELECT * FROM " + table + " order by time"
+        tab = int(data_input.tab)
+        results = db.query(query)
+        data=[]
+ 
+        for i in results:
+            record = {"data":str(i.time),"val":float(i.quote)}
+            data.append(record)
+        
+        if tab is 1:   # Linear Regression
+            record = {"data":str(i.time),"val":PyRegression.getCompany(data_input.table,1)}
+            data.append(record)
+
+        return json.dumps(data)
+
+class admin:
+    def GET(self):
+        web.header('Content-Type', 'text/html')
+        values={}
+        
+        return render_template('admin.html',values)
+
+class user:
+    def GET(self):
+        web.header('Content-Type', 'text/html')
+        values = {}
+
+        tables = ['aapl','goog','bac']
+        for table in tables:
+            b = values[table+'_stock'] = float(db.query("SELECT quote FROM quotes_"+table+" order by time DESC LIMIT 0,1" )[0].quote)
+            a = values[table+'_our']   = float("{0:.2f}".format(PyRegression.getCompany(table,1)))
+            diff = a - b
+            avg  = (a + b)/2
+            values[table+'_per'] = float("{0:.2f}".format((diff/avg)*100))
+            
+        return render_template('user.html',values)
+
+application = app.wsgifunc()
+
+#
+# Below for testing only
+#
+if __name__ == '__main__':
+	from wsgiref.simple_server import make_server
+	httpd = make_server('localhost', 8051, application)
+	# Wait for a single request, serve it and quit.
+	httpd.handle_request()

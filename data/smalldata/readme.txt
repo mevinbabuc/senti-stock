@@ -1,0 +1,1 @@
+smalldata is used to store weekly trained data.

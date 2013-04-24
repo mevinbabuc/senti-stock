@@ -1,0 +1,5 @@
+#! /bin/bash
+source ~/python-2.6/virtenv/bin/activate
+
+chmod +x $OPENSHIFT_REPO_DIR/.openshift/cron/daily/InsiderCollector.py
+nohup python $OPENSHIFT_REPO_DIR/.openshift/cron/daily/InsiderCollector.py &> /dev/null &

@@ -1,0 +1,8 @@
+#! /bin/bash
+source ~/python-2.6/virtenv/bin/activate
+
+chmod +x $OPENSHIFT_REPO_DIR/.openshift/cron/weekly/NegTrainer.py
+nohup python $OPENSHIFT_REPO_DIR/.openshift/cron/weekly/NegTrainer.py &> /dev/null &
+
+chmod +x $OPENSHIFT_REPO_DIR/.openshift/cron/weekly/PosTrainer.py
+nohup python $OPENSHIFT_REPO_DIR/.openshift/cron/weekly/PosTrainer.py &> /dev/null &

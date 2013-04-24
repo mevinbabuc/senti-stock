@@ -1,0 +1,49 @@
+body {
+	overflow-x: hidden;
+}
+
+.btn-group>.btn:active i,.btn-group>.btn:hover i,.btn-group>.btn.active i
+	{
+	background-image: url("../img/glyphicons-halflings-white.png");
+	-webkit-transition: all .5s;
+}
+
+table .label {
+	background-color: transparent;
+	text-align: center;
+}
+
+.positive {
+	background-color: rgb(70, 136, 71) !important;
+}
+
+.negative {
+	background-color: rgb(185, 74, 72) !important;
+}
+
+#loadmoreButton {
+	position: fixed;
+	left: 25px;
+	top: 130px;
+}
+
+#loadmoreButton i {
+	margin-right: 5px;
+}
+
+td[colspan='3'] {
+	border: none;
+}
+
+#rightContent {
+	position: relative;
+	left: 110%;
+}
+
+.checkbox input[type="checkbox"] {
+	margin-left: -10px;
+}
+
+.checkbox label {
+	margin-left: 12px;
+}

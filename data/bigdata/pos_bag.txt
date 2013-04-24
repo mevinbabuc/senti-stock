@@ -1,0 +1,9 @@
+good 60
+love 60
+great 40
+LOL 80
+happy 60
+like 40
+excited 50
+amaz 40
+nice 40

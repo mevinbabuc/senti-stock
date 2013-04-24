@@ -1,0 +1,15 @@
+bad 70
+lost 80
+messed 80
+frustrated 50
+fuck 80
+suck 80
+die 30
+damn 10
+hate 50
+not 30
+sad 60
+scari 30
+sick 20
+miss 15
+dissapoint 15
