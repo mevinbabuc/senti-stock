@@ -15,11 +15,15 @@ http://www.stock-websense.rhcloud.com/readme.txt
 
 
 Name	:SentiStock
+
 Version	:1.2
-Authors	:Anenth Vishnu K.P. (anenth.us at gmail.com)
-		 Jovin George (jjovin2010 at gmail.com)
-		 Mevin Babu Chirayath (mevinbabuc at gmail.com)
-		 Rohit Vincent (therohitvincent at gmail.com)
+
+Authors:
+* Anenth Vishnu K.P. (anenth.us at gmail.com)
+* Jovin George (jjovin2010 at gmail.com)
+* Mevin Babu Chirayath (mevinbabuc at gmail.com)
+* Rohit Vincent (therohitvincent at gmail.com)
+
 Date	:April 26,2013
 
 I.	Description
